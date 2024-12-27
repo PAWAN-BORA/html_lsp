@@ -1,8 +1,8 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write} };
+use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write} };
 
-use serde_json::{from_value, to_value, Value};
+use serde_json::{from_value, to_value};
 
-use crate::{logger::Logger, lsp::{lsp_params::{DidOpenTextDocumentParams, InitializeParams}, lsp_results::{Capabilities, InitializeResult, ServerInfo, TextDocumentSyncKind}}, rpc::{encode_message, Id, LspRequest, LspResponse}};
+use crate::{analysis::hover_analysis::get_hover_data, logger::Logger, lsp::{lsp_params::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, HoverParams, InitializeParams}, lsp_results::{Capabilities, HoverResult, InitializeResult, ServerInfo, TextDocumentSyncKind}, lsp_struct::{Position, Range}}, rpc::{encode_message, Id, LspRequest, LspResponse}};
 
 
 
@@ -48,15 +48,27 @@ impl <'a>State<'a> {
       "textDocument/didOpen"=>{
         let did_open_text_document_params:DidOpenTextDocumentParams = from_value(lsp_request.params.unwrap()).unwrap();
         self.add_or_update_doucment(did_open_text_document_params.text_document.uri, did_open_text_document_params.text_document.text);
-        self.logger.borrow_mut().info("Document did opened!");
+        // self.logger.borrow_mut().info("Document did opened!");
       }
       "textDocument/didChange"=>{
+        let did_change_params:DidChangeTextDocumentParams = from_value(lsp_request.params.unwrap()).unwrap();
+        for text_doc in did_change_params.content_changes {
+          let uri = did_change_params.text_document.uri.clone();
+          self.add_or_update_doucment(uri, text_doc.text);
+        }
         self.logger.borrow_mut().info("Document did change!");
+
+
         // self.add_or_update_doucment(did_open_text_document_params);
       }
       "textDocument/hover"=>{
         self.logger.borrow_mut().info("Document hovered!");
-        // self.add_or_update_doucment(did_open_text_document_params);
+        let hover_params:HoverParams= from_value(lsp_request.params.unwrap()).unwrap();
+        let id = lsp_request.id.unwrap();
+        let lsp_response = self.hover_response(id, hover_params.text_doucment_position_params.text_document.uri, hover_params.text_doucment_position_params.position);
+        self.logger.borrow_mut().info(hover_params.text_doucment_position_params.position.line.to_string().as_str());
+        self.logger.borrow_mut().info(hover_params.text_doucment_position_params.position.character.to_string().as_str());
+        self.write_response(lsp_response);
       }
       _ =>{
         let msg = format!("Method not found: {}", lsp_request.method);
@@ -89,11 +101,30 @@ impl <'a>State<'a> {
   fn add_or_update_doucment(&mut self, uri:String, text:String){
     self.documents.insert(uri, text);
   }
+  fn hover_response(&self, id:u32, uri:String, position:Position)->LspResponse{
+    self.logger.borrow_mut().info(&uri);
+    let empty_val = "".to_string();
+    let content = self.documents.get(&uri).unwrap_or(&empty_val);
+    let hover_data = get_hover_data(content, &position);
+    let hover_result = HoverResult {
+      contents:hover_data,
+      range:None
+    };
+
+    let lsp_response = LspResponse {
+      jsonrpc:"2.0".to_string(),
+      id:Id::Interger(id),
+      result:Some(to_value(hover_result).unwrap()),
+      error:None,
+    };
+    return lsp_response;
+
+  }
   fn write_response(&mut self, lsp_response:LspResponse){
     let msg = encode_message(lsp_response);
+    self.logger.borrow_mut().info(&msg);
     self.writer.write(msg.as_bytes()).expect("Failed to write");
     self.writer.flush().expect("Failed to flush");
-    self.logger.borrow_mut().info(msg.as_str());
   }
     
 }

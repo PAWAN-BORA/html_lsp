@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::lsp_struct::Range;
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all="camelCase")]
 pub enum TextDocumentSyncKind {
@@ -34,4 +36,13 @@ pub struct ServerInfo {
 pub struct InitializeResult {
   pub capabilities:Capabilities,
   pub server_info:ServerInfo,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct HoverResult {
+  pub contents:String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub range:Option<Range>
+
 }

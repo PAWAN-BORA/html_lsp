@@ -8,6 +8,7 @@ mod rpc;
 mod logger;
 mod state;
 mod lsp;
+mod analysis;
 // const JSON_STR:&str = "Content-Length: 76\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\",\"params\":{\"name\":\"test\",\"value\":34}}";
 fn main() {
   
@@ -56,8 +57,8 @@ fn main() {
       }
       let message = accum_buffer.drain(..total_length).collect::<Vec<u8>>();
       let lsp_request = decode_message(message.as_slice());
-      let msg_str = str::from_utf8(message.as_slice()).unwrap();
-      logger.borrow_mut().info(msg_str);
+      // let msg_str = str::from_utf8(message.as_slice()).unwrap();
+      // logger.borrow_mut().info(msg_str);
       match lsp_request {
 
         Ok(value)=>{
