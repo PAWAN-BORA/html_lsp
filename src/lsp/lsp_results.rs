@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::lsp_struct::Range;
+use super::lsp_struct::{CompletionOptions, Range};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all="camelCase")]
@@ -24,6 +24,7 @@ impl Serialize for TextDocumentSyncKind {
 pub struct Capabilities {
   pub hover_provider:bool,
   pub text_document_sync:TextDocumentSyncKind,
+  pub completion_provider:CompletionOptions,
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all="camelCase")]
@@ -46,3 +47,4 @@ pub struct HoverResult {
   pub range:Option<Range>
 
 }
+

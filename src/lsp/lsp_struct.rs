@@ -42,3 +42,15 @@ pub struct VersionedTextDocumentIdentifier {
   pub uri:String,
 
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct CompletionOptions {
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct CompletionItem {
+  pub label:String,
+  pub detail:String,
+}

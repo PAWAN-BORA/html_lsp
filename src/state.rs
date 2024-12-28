@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write} };
 
 use serde_json::{from_value, to_value};
 
-use crate::{analysis::hover_analysis::get_hover_data, logger::Logger, lsp::{lsp_params::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, HoverParams, InitializeParams}, lsp_results::{Capabilities, HoverResult, InitializeResult, ServerInfo, TextDocumentSyncKind}, lsp_struct::{Position, Range}}, rpc::{encode_message, Id, LspRequest, LspResponse}};
+use crate::{analysis::{completion_analysis::get_completion_items, hover_analysis::get_hover_data}, logger::Logger, lsp::{lsp_params::{CompletionParams, DidChangeTextDocumentParams, DidOpenTextDocumentParams, HoverParams, InitializeParams}, lsp_results::{Capabilities, HoverResult, InitializeResult, ServerInfo, TextDocumentSyncKind}, lsp_struct::{CompletionItem, CompletionOptions, Position, Range}}, rpc::{encode_message, Id, LspRequest, LspResponse}};
 
 
 
@@ -56,18 +56,19 @@ impl <'a>State<'a> {
           let uri = did_change_params.text_document.uri.clone();
           self.add_or_update_doucment(uri, text_doc.text);
         }
-        self.logger.borrow_mut().info("Document did change!");
-
-
-        // self.add_or_update_doucment(did_open_text_document_params);
+      }
+      "textDocument/completion"=>{
+        let completion_params:CompletionParams= from_value(lsp_request.params.unwrap()).unwrap();
+        let id = lsp_request.id.unwrap();
+        let lsp_response = self.completion_response(id, completion_params.text_document_position_params.text_document.uri, completion_params.text_document_position_params.position);
+        self.write_response(lsp_response);
+        self.logger.borrow_mut().info("ask for complition");
       }
       "textDocument/hover"=>{
         self.logger.borrow_mut().info("Document hovered!");
         let hover_params:HoverParams= from_value(lsp_request.params.unwrap()).unwrap();
         let id = lsp_request.id.unwrap();
-        let lsp_response = self.hover_response(id, hover_params.text_doucment_position_params.text_document.uri, hover_params.text_doucment_position_params.position);
-        self.logger.borrow_mut().info(hover_params.text_doucment_position_params.position.line.to_string().as_str());
-        self.logger.borrow_mut().info(hover_params.text_doucment_position_params.position.character.to_string().as_str());
+        let lsp_response = self.hover_response(id, hover_params.text_document_position_params.text_document.uri, hover_params.text_document_position_params.position);
         self.write_response(lsp_response);
       }
       _ =>{
@@ -82,6 +83,7 @@ impl <'a>State<'a> {
       capabilities:Capabilities{
         hover_provider:true,
         text_document_sync:TextDocumentSyncKind::Full,
+        completion_provider:CompletionOptions {}
       },
       server_info:ServerInfo {
         name:"html_lsp".to_string(),
@@ -101,8 +103,21 @@ impl <'a>State<'a> {
   fn add_or_update_doucment(&mut self, uri:String, text:String){
     self.documents.insert(uri, text);
   }
+  fn completion_response(&self, id:u32, uri:String, position:Position)->LspResponse {
+
+    // let logger = 
+    let empty_val = "".to_string();
+    let content = self.documents.get(&uri).unwrap_or(&empty_val);
+    let completion_result:Vec<CompletionItem> = get_completion_items(content, &position); 
+    let lsp_response = LspResponse {
+      jsonrpc:"2.0".to_string(),
+      id:Id::Interger(id),
+      result:Some(to_value(completion_result).unwrap()),
+      error:None,
+    };
+    return lsp_response;
+  }
   fn hover_response(&self, id:u32, uri:String, position:Position)->LspResponse{
-    self.logger.borrow_mut().info(&uri);
     let empty_val = "".to_string();
     let content = self.documents.get(&uri).unwrap_or(&empty_val);
     let hover_data = get_hover_data(content, &position);

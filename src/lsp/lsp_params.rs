@@ -42,5 +42,12 @@ pub struct TextDocumentPositionParams {
 #[serde(rename_all="camelCase")]
 pub struct HoverParams {
   #[serde(flatten)]
-  pub text_doucment_position_params:TextDocumentPositionParams,
+  pub text_document_position_params:TextDocumentPositionParams,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct CompletionParams {
+  #[serde(flatten)]
+  pub text_document_position_params:TextDocumentPositionParams,
 }
