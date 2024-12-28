@@ -122,8 +122,7 @@ impl <'a>State<'a> {
   }
   fn write_response(&mut self, lsp_response:LspResponse){
     let msg = encode_message(lsp_response);
-    self.logger.borrow_mut().info(&msg);
-    self.writer.write(msg.as_bytes()).expect("Failed to write");
+    self.writer.write_all(msg.as_bytes()).expect("Failed to write");
     self.writer.flush().expect("Failed to flush");
   }
     

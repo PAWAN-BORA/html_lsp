@@ -37,8 +37,8 @@ pub fn encode_message(req:LspResponse)->String{
   let req_json = to_string(&req);
   if req_json.is_ok() {
     let req_str =  req_json.ok().unwrap();
-    let respnse = format!("Content-Length: {}\r\n\r\n{}", req_str.chars().count(), req_str);//r#"Content-Length: \r\n\r\n"#;;
-    return  respnse;
+    let response = format!("Content-Length: {}\r\n\r\n{}", req_str.len(), req_str);//r#"Content-Length: \r\n\r\n"#;;
+    return  response;
   }else {
     panic!("Error occure in encoding: ${:?}", req_json.err());
   }
