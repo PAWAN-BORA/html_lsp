@@ -1,6 +1,0 @@
-info [html_lsp] 2024-12-28 10:35:17,[src/main.rs:17:23] Main function Started!
-info [html_lsp] 2024-12-28 10:35:17,[src/state.rs:26:30] inside the handle message
-info [html_lsp] 2024-12-28 10:35:17,[src/state.rs:34:38] name:Neovim varsion:0.10.3+v0.10.3
-info [html_lsp] 2024-12-28 10:35:17,[src/state.rs:43:34] initialize method
-info [html_lsp] 2024-12-28 10:35:17,[src/state.rs:26:30] inside the handle message
-info [html_lsp] 2024-12-28 10:35:17,[src/state.rs:46:34] LSP connected!

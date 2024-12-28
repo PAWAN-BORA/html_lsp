@@ -119,6 +119,6 @@ mod tests {
     let req:&str = "Content-Length: 76\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"test\",\"params\":{\"name\":\"test\",\"value\":34}}";
     let result = decode_message(req.as_bytes()).unwrap();
     assert_eq!(result.method, "test");
-    assert_eq!(result.id, 1);
+    assert_eq!(result.id.unwrap(), 1);
   }
 }
