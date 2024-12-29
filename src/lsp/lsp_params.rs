@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::lsp_struct::{Position, TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem, VersionedTextDocumentIdentifier};
+use super::lsp_struct::{Diagnostic, Position, TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem, VersionedTextDocumentIdentifier};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -50,4 +50,11 @@ pub struct HoverParams {
 pub struct CompletionParams {
   #[serde(flatten)]
   pub text_document_position_params:TextDocumentPositionParams,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct PublishDiagnosticsParams {
+  pub uri:String,
+  pub diagnostics:Vec<Diagnostic>
 }

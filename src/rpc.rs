@@ -15,6 +15,13 @@ pub struct LspRequest {
   pub params:Option<Value>,
 
 }
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct NotificationMessage {
+  pub jsonrpc:String,
+  pub method:String,
+  pub params:Value,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -33,7 +40,7 @@ pub struct LspResponse {
   pub error:Option<Value>,
 }
 
-pub fn encode_message(req:LspResponse)->String{
+pub fn encode_message<T:Serialize>(req:T)->String{
   let req_json = to_string(&req);
   if req_json.is_ok() {
     let req_str =  req_json.ok().unwrap();

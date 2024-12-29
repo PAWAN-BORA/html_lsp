@@ -1,8 +1,9 @@
 use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write} };
 
+use serde::Serialize;
 use serde_json::{from_value, to_value};
 
-use crate::{analysis::{completion_analysis::get_completion_items, hover_analysis::get_hover_data}, logger::Logger, lsp::{lsp_params::{CompletionParams, DidChangeTextDocumentParams, DidOpenTextDocumentParams, HoverParams, InitializeParams}, lsp_results::{Capabilities, HoverResult, InitializeResult, ServerInfo, TextDocumentSyncKind}, lsp_struct::{CompletionItem, CompletionOptions, Position, Range}}, rpc::{encode_message, Id, LspRequest, LspResponse}};
+use crate::{analysis::{completion_analysis::get_completion_items, diagnostic::{get_diagnostics}, hover_analysis::get_hover_data}, logger::Logger, lsp::{lsp_params::{CompletionParams, DidChangeTextDocumentParams, DidOpenTextDocumentParams, HoverParams, InitializeParams, PublishDiagnosticsParams}, lsp_results::{Capabilities, HoverResult, InitializeResult, ServerInfo, TextDocumentSyncKind}, lsp_struct::{CompletionItem, CompletionOptions, Position}}, rpc::{encode_message, Id, LspRequest, LspResponse, NotificationMessage}};
 
 
 
@@ -47,7 +48,8 @@ impl <'a>State<'a> {
       }
       "textDocument/didOpen"=>{
         let did_open_text_document_params:DidOpenTextDocumentParams = from_value(lsp_request.params.unwrap()).unwrap();
-        self.add_or_update_doucment(did_open_text_document_params.text_document.uri, did_open_text_document_params.text_document.text);
+        let uri = did_open_text_document_params.text_document.uri;
+        self.add_or_update_doucment(uri.clone(), did_open_text_document_params.text_document.text);
         // self.logger.borrow_mut().info("Document did opened!");
       }
       "textDocument/didChange"=>{
@@ -84,6 +86,7 @@ impl <'a>State<'a> {
         hover_provider:true,
         text_document_sync:TextDocumentSyncKind::Full,
         completion_provider:CompletionOptions {}
+
       },
       server_info:ServerInfo {
         name:"html_lsp".to_string(),
@@ -101,7 +104,19 @@ impl <'a>State<'a> {
     return lsp_response
   }
   fn add_or_update_doucment(&mut self, uri:String, text:String){
-    self.documents.insert(uri, text);
+    self.documents.insert(uri.clone(), text.clone());
+    let diagnostics = get_diagnostics(text);
+    let params = PublishDiagnosticsParams {
+      uri:uri,
+      diagnostics:diagnostics,
+
+    };
+    let notification = NotificationMessage {
+      jsonrpc:"2.0".to_string(),
+      method:"textDocument/publishDiagnostics".to_string(),
+      params:to_value(params).unwrap(),
+    };
+    self.write_response(notification);
   }
   fn completion_response(&self, id:u32, uri:String, position:Position)->LspResponse {
 
@@ -135,7 +150,7 @@ impl <'a>State<'a> {
     return lsp_response;
 
   }
-  fn write_response(&mut self, lsp_response:LspResponse){
+  fn write_response<T:Serialize>(&mut self, lsp_response:T){
     let msg = encode_message(lsp_response);
     self.writer.write_all(msg.as_bytes()).expect("Failed to write");
     self.writer.flush().expect("Failed to flush");

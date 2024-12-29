@@ -57,8 +57,8 @@ fn main() {
       }
       let message = accum_buffer.drain(..total_length).collect::<Vec<u8>>();
       let lsp_request = decode_message(message.as_slice());
-      // let msg_str = str::from_utf8(message.as_slice()).unwrap();
-      // logger.borrow_mut().info(msg_str);
+      let msg_str = str::from_utf8(message.as_slice()).unwrap();
+      logger.borrow_mut().info(msg_str);
       match lsp_request {
 
         Ok(value)=>{
