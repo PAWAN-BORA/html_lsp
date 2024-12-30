@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write}, rc::Rc, thread};
+use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write}, sync::{Arc, Mutex}, thread};
 
 use serde::Serialize;
 use serde_json::{from_value, to_value};
@@ -9,7 +9,7 @@ use crate::{analysis::{completion_analysis::get_completion_items, diagnostic::{g
 
 pub struct State<'a> {
   logger:&'a RefCell<Logger>,
-  writer:Stdout,
+  writer:Arc<Mutex<Stdout>>,
   documents:HashMap<String, String>
 }
 
@@ -18,13 +18,11 @@ impl <'a>State<'a> {
     State { 
       logger: logger,
       documents:HashMap::new(),
-      writer:stdout()
+      writer:Arc::new(Mutex::new(stdout())),
     }
   }
 
   pub fn handle_message(&mut self, lsp_request:LspRequest){
-
-    self.logger.borrow_mut().info("inside the handle message");
     match lsp_request.method.as_str() {
       "initialize"=>{
         let initialize_params:InitializeParams = from_value(lsp_request.params.unwrap()).unwrap();
@@ -106,6 +104,7 @@ impl <'a>State<'a> {
   fn add_or_update_doucment(&mut self, uri:String, text:String){
     self.documents.insert(uri.clone(), text.clone());
     thread::spawn({
+      let writer = Arc::clone(&self.writer);
       move || {
         let diagnostics = get_diagnostics(text);
         let params = PublishDiagnosticsParams {
@@ -118,8 +117,8 @@ impl <'a>State<'a> {
           params:to_value(params).unwrap(),
         };
         let msg = encode_message(notification);
-        let writer = stdout();
-        let mut handler = writer.lock();
+        // let writer = stdout();
+        let mut handler = writer.lock().expect("Failed to lock");
         handler.write_all(msg.as_bytes()).expect("Failed to write");
         handler.flush().expect("Failed to flush");
       }
@@ -159,7 +158,7 @@ impl <'a>State<'a> {
   }
   fn write_response<T:Serialize>(&mut self, lsp_response:T){
     let msg = encode_message(lsp_response);
-    let mut handler = self.writer.lock();
+    let mut handler = self.writer.lock().expect("Failed to write lock");
     handler.write_all(msg.as_bytes()).expect("Failed to write");
     handler.flush().expect("Failed to flush");
   }
