@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write} };
+use std::{cell::RefCell, collections::HashMap, io::{stdout, Stdout, Write}, rc::Rc, thread};
 
 use serde::Serialize;
 use serde_json::{from_value, to_value};
@@ -105,18 +105,25 @@ impl <'a>State<'a> {
   }
   fn add_or_update_doucment(&mut self, uri:String, text:String){
     self.documents.insert(uri.clone(), text.clone());
-    let diagnostics = get_diagnostics(text);
-    let params = PublishDiagnosticsParams {
-      uri:uri,
-      diagnostics:diagnostics,
-
-    };
-    let notification = NotificationMessage {
-      jsonrpc:"2.0".to_string(),
-      method:"textDocument/publishDiagnostics".to_string(),
-      params:to_value(params).unwrap(),
-    };
-    self.write_response(notification);
+    thread::spawn({
+      move || {
+        let diagnostics = get_diagnostics(text);
+        let params = PublishDiagnosticsParams {
+          uri:uri,
+          diagnostics:diagnostics,
+        };
+        let notification = NotificationMessage {
+          jsonrpc:"2.0".to_string(),
+          method:"textDocument/publishDiagnostics".to_string(),
+          params:to_value(params).unwrap(),
+        };
+        let msg = encode_message(notification);
+        let writer = stdout();
+        let mut handler = writer.lock();
+        handler.write_all(msg.as_bytes()).expect("Failed to write");
+        handler.flush().expect("Failed to flush");
+      }
+    });
   }
   fn completion_response(&self, id:u32, uri:String, position:Position)->LspResponse {
 
@@ -152,8 +159,9 @@ impl <'a>State<'a> {
   }
   fn write_response<T:Serialize>(&mut self, lsp_response:T){
     let msg = encode_message(lsp_response);
-    self.writer.write_all(msg.as_bytes()).expect("Failed to write");
-    self.writer.flush().expect("Failed to flush");
+    let mut handler = self.writer.lock();
+    handler.write_all(msg.as_bytes()).expect("Failed to write");
+    handler.flush().expect("Failed to flush");
   }
     
 }
